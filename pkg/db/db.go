@@ -2,9 +2,9 @@ package db
 
 import (
 	"log"
-	"reflect"
 	"sync"
 
+	"github.com/ajalck/CRUD_With_PSQL/pkg/config"
 	"github.com/ajalck/CRUD_With_PSQL/pkg/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -14,12 +14,11 @@ type DB struct {
 	DB *gorm.DB
 }
 
-func ConnectDB(ch, ch1 chan interface{}, wg *sync.WaitGroup) {
+func ConnectDB(ch, ch1, ch2 chan interface{}, wg *sync.WaitGroup) {
 	defer wg.Done()
-	config := <-ch
-	value := reflect.ValueOf(config)
-	dsn := value.Elem().FieldByName("DB_Source")
-	db, err := gorm.Open(postgres.Open(dsn.String()), &gorm.Config{
+	c := <-ch
+	configuration := c.(*config.Config)
+	db, err := gorm.Open(postgres.Open(configuration.DB_Source), &gorm.Config{
 		SkipDefaultTransaction: true,
 	})
 	if err != nil {
@@ -38,14 +37,13 @@ func ConnectDB(ch, ch1 chan interface{}, wg *sync.WaitGroup) {
 	}
 
 	ch1 <- db
+	ch2 <- db
 }
 
 func ConfigDB(ch1 chan interface{}, wg *sync.WaitGroup) {
 	defer wg.Done()
 	DB := <-ch1
-	Db := reflect.ValueOf(DB)
-	actualdb := Db.Interface().(*gorm.DB)
-	db := actualdb
+	db := DB.(*gorm.DB)
 	tx := db.Begin()
 	checkNameLength := `DO $$
 						BEGIN
