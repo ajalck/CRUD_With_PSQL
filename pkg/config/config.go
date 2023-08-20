@@ -2,6 +2,7 @@ package config
 
 import (
 	"log"
+	"sync"
 
 	"github.com/spf13/viper"
 )
@@ -10,7 +11,8 @@ type Config struct {
 	DB_Source string `mapstructure:"DB_SOURCE"`
 }
 
-func LoadEnv() *Config {
+func LoadEnv(ch chan interface{}, wg *sync.WaitGroup) {
+	defer wg.Done()
 	viper.AddConfigPath("./pkg/env")
 	viper.SetConfigType("env")
 	viper.SetConfigName("app")
@@ -23,5 +25,5 @@ func LoadEnv() *Config {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	return c
+	ch <- c
 }
